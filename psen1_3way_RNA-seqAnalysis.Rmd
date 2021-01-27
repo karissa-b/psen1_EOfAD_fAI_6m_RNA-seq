@@ -33,7 +33,7 @@ library(goseq)
 library(pathview)
 library(RColorBrewer)
 library(UpSetR)
-library()
+library(pander)
 library(kableExtra)
 
 theme_set(theme_bw())
@@ -312,7 +312,7 @@ This didnt really work. So I manually inspected the alignments using IGV and cou
 psen1_gene_id <- "ENSDARG00000004870"
 
 ggarrange(
-  cpm(x_, log = TRUE) %>% 
+  cpm(x, log = TRUE) %>% 
   as.data.frame() %>% 
   .[psen1_gene_id,] %>% 
   gather(key = "sample", value = "logCPM") %>% 
@@ -888,9 +888,9 @@ sig_in <-
   dplyr::select(pathway, sig, coef) %>% 
   spread(key = 'coef', value = 'sig') %>% 
   mutate(sig_in = case_when(
-    `T428del/+` == "TRUE" & `W233fs/+` == "TRUE" ~ 'both', 
-    `T428del/+` == FALSE & `W233fs/+` == "TRUE" ~ 'fHS only', 
-    `T428del/+` == "TRUE" & `W233fs/+` == FALSE ~ 'EOfAD only', 
+    `EOfAD-like/+` == "TRUE" & `fAI-like/+` == "TRUE" ~ 'both', 
+    `EOfAD-like/+` == FALSE & `fAI-like/+` == "TRUE" ~ 'fHS only', 
+    `EOfAD-like/+` == "TRUE" & `fAI-like/+` == FALSE ~ 'EOfAD only', 
     TRUE ~ 'neither'
   )) %>% 
   dplyr::select(pathway, sig_in)
@@ -935,9 +935,9 @@ fgseaRes1$`EOfAD-like/+` %>%
   UpSetR::upset(order.by = "freq", nsets = length(.))
 
 # upset leading edeg fHS
-fgseaRes1$`fHS-like/+` %>% 
+fgseaRes1$`fAI-like/+` %>% 
   dplyr::filter(pathway %in%c(HMP_1 %>% 
-                                dplyr::filter(coef == "fHS-like/+" & sig == TRUE) %>%
+                                dplyr::filter(coef == "fAI-like/+" & sig == TRUE) %>%
                                 .$pathway)
                 ) %>% 
   # shorten this name for vis purposes
@@ -967,7 +967,6 @@ fgseaRes1 %>%
   dplyr::distinct(gene_name, coef, .keep_all = TRUE) %>% 
   spread(key = "coef", value = "logFC") %>% 
   column_to_rownames("gene_name") %>% 
-  t() %>% 
   pheatmap(cluster_cols = F,cluster_rows = F, 
            na_col = "grey80",
            cellwidth = 12, cellheight = 12,
@@ -987,7 +986,6 @@ fgseaRes1 %>%
   dplyr::distinct(gene_name, coef, .keep_all = TRUE) %>% 
   spread(key = "coef", value = "logFC") %>% 
   column_to_rownames("gene_name") %>% 
-  t() %>% 
   pheatmap(cluster_cols = F,cluster_rows = F, 
            na_col = "grey80",
            cellwidth = 12, cellheight = 12,
@@ -1007,7 +1005,6 @@ fgseaRes1 %>%
   dplyr::distinct(gene_name, coef, .keep_all = TRUE) %>% 
   spread(key = "coef", value = "logFC") %>% 
   column_to_rownames("gene_name") %>% 
-  t() %>% 
   pheatmap(cluster_cols = F,cluster_rows = F, 
            na_col = "grey80",
            cellwidth = 12, cellheight = 12,
@@ -1031,16 +1028,16 @@ toptable_1 %>%
               seq(max(.)/100, max(.), length.out=floor(100/2)))
            )
 
-toptable_Q96 %>% 
-  dplyr::filter(ensembl_gene_id %in% KEGG$KEGG_RIBOSOME) %>% 
-  dplyr::select(ensembl_gene_id, logFC) %>% 
-  column_to_rownames("ensembl_gene_id") %>% 
-  pheatmap(colorRampPalette(rev(brewer.pal(n = 7, name = "RdBu")))(100), 
-           show_rownames = FALSE, cluster_cols = F,
-           treeheight_row = 0, treeheight_col = 0, 
-           breaks = c(seq(min(.), 0, length.out=ceiling(100/2) + 1), 
-              seq(max(.)/100, max(.), length.out=floor(100/2)))
-           )
+# toptable_Q96 %>% 
+#   dplyr::filter(ensembl_gene_id %in% KEGG$KEGG_RIBOSOME) %>% 
+#   dplyr::select(ensembl_gene_id, logFC) %>% 
+#   column_to_rownames("ensembl_gene_id") %>% 
+#   pheatmap(colorRampPalette(rev(brewer.pal(n = 7, name = "RdBu")))(100), 
+#            show_rownames = FALSE, cluster_cols = F,
+#            treeheight_row = 0, treeheight_col = 0, 
+#            breaks = c(seq(min(.), 0, length.out=ceiling(100/2) + 1), 
+#               seq(max(.)/100, max(.), length.out=floor(100/2)))
+#            )
 ```
 
 ```{r}
@@ -1232,8 +1229,7 @@ toptable_1 %>%
 ```{r}
 fryRes_nopsen1 <- design %>% colnames() %>% .[2:3] %>% 
   sapply(function(y) {
-    cpm(x$counts, log = TRUE)[!grepl(rownames(cpm(x$counts)), pattern = "ENSDARG00000004870"),] %>% 
-    fry(
+    cpm(x$counts, log = TRUE)[!grepl(rownames(cpm(x$counts)), pattern = "ENSDARG00000004870"),] %>%     fry(
       index = c(KEGG, ireGenes),
         design = design, 
         contrast = y, 
@@ -1246,7 +1242,7 @@ fryRes_nopsen1 <- design %>% colnames() %>% .[2:3] %>%
 
 cameraRes_nopsen1 <- design %>% colnames() %>% .[2:3] %>% 
   sapply(function(y) {
-    cpm(x$counts, log = TRUE)[!grepl(rownames(cpm(x$counts)), pattern = "ENSDARG00000004870"),] %>% 
+    cpm(x$counts, log = TRUE)[!grepl(rownames(cpm(x$counts)), pattern = "ENSDARG00000004870"),] %>%
       camera(
         index = c(KEGG, ireGenes),
         design = design, 
@@ -1273,8 +1269,8 @@ ranks_fgsea_nopsen1 <-
 
 set.seed(1)
 fgseaRes_nopsen1 <- ranks_fgsea_nopsen1 %>%
-  lapply(function(x){
-    fgseaMultilevel(stats = x, pathways = c(KEGG, ireGenes), eps = 0) %>%
+  lapply(function(y){
+    fgseaMultilevel(stats = y, pathways = c(KEGG, ireGenes), eps = 0) %>%
       as_tibble() %>%
       dplyr::rename(FDR = padj) %>%
       mutate(padj = p.adjust(pval, "bonferroni")) %>%
@@ -1286,8 +1282,8 @@ fgseaRes_nopsen1 <- ranks_fgsea_nopsen1 %>%
 fgseaRes_nopsen1$`EOfAD-like/+` %<>% 
   mutate(coef = "EOfAD-like/+" )
 
-fgseaRes_nopsen1$`fHS-like/+` %<>% 
-  mutate(coef = 'fHS-like/+')
+fgseaRes_nopsen1$`fAI-like/+` %<>% 
+  mutate(coef = 'fAI-like/+')
 
 HMP_nopsen1 <- fryRes_nopsen1 %>% 
   bind_rows() %>% 
@@ -1421,100 +1417,100 @@ HMP_notch <- fryRes_notch %>%
   arrange(harmonic_p) 
 
 HMP_notch
-
-annocol <- notchTargets$RYAN_MANTLE_CELL_LYMPHOMA_NOTCH_DIRECT_UP %>% 
-  as.data.frame() %>% 
-  set_colnames("gene_id") %>% 
-  mutate(`EOfAD-like/+` = case_when(
-    gene_id %in% fgseaRes_notch$`EOfAD-like/+`$leadingEdge[[1]] ~ "TRUE"),
-    `fAI-like/+` = case_when(
-      gene_id %in% fgseaRes_notch$`fAI-like/+`$leadingEdge[[1]] ~ "TRUE"
-    )  
-  ) %>% 
-  replace_na(list(`EOfAD-like/+` = FALSE, `fAI-like/+` = FALSE)) %>% 
-  inner_join(x$genes) %>% 
-  dplyr::distinct(gene_name, .keep_all = TRUE) %>% 
-  dplyr::select(gene_name, `EOfAD-like/+`, `fAI-like/+`) %>% 
-  column_to_rownames("gene_name") 
-
-png("plots/ryanetalPheatmap.png", width = 60, height = 20, units = "cm", res = 600)
-toptable_1 %>% 
-  bind_rows() %>% 
-  dplyr::filter(gene_id %in% notchTargets$RYAN_MANTLE_CELL_LYMPHOMA_NOTCH_DIRECT_UP) %>% 
-  dplyr::select(gene_name, coef, logFC) %>% 
-  dplyr::distinct(gene_name, coef, .keep_all = TRUE) %>% 
-  spread(key = "coef", value = "logFC") %>% 
-  column_to_rownames("gene_name") %>% 
-  t() %>% 
-  pheatmap(cellwidth = 10, cellheight = 10,
-           treeheight_row = 0, treeheight_col = 80,
-           breaks = seq(-max(abs(.)),  max(abs(.)), length.out = 100), 
-           color = colorRampPalette(rev(brewer.pal(n = 7, 
-                                                   name = "RdBu")))(100), 
-           main = "RYAN_MANTLE_CELL_LYMPHOMA_NOTCH_DIRECT_UP" , 
-           annotation_col = annocol, 
-           annotation_colors = list(
-             `EOfAD-like/+` = c("FALSE" = "grey70", "TRUE" = "#6bff97"), 
-             `fAI-like/+` = c("FALSE" = "grey70", "TRUE" = "#6bff97"))
-           )
-dev.off()  
-  
-fgseaRes_notch %>% 
-  lapply(function(y) {
-    y %>% 
-      dplyr::filter(pathway == "RYAN_MANTLE_CELL_LYMPHOMA_NOTCH_DIRECT_UP") %>% 
-      dplyr::select(leadingEdge)
-  }) %>% 
-  unlist %>% 
-  as.data.frame() %>% 
-  rownames_to_column("coef") %>% 
-  set_colnames(c("coef", "gene_id")) %>% 
-  mutate(coef = str_remove(coef, pattern = ".leadingEdge[0-9]+")) %>% 
-  split(f = .$coef) %>% 
-  lapply(magrittr::extract2, "gene_id") %>% 
-  UpSetR::fromList() %>% 
-  UpSetR::upset(order.by = "freq")
-
-toptable_1 %>% 
-  bind_rows() %>% 
-  dplyr::filter(gene_id %in% intersect(fgseaRes_notch$`EOfAD-like/+`[1,]$leadingEdge[[1]], 
-                                       fgseaRes_notch$`fHS-like/+`[1,]$leadingEdge[[1]])) %>% 
-  dplyr::select(gene_name, coef, logFC) %>% 
-  dplyr::distinct(gene_name, coef, .keep_all = TRUE) %>% 
-  spread(key = "coef", value = "logFC") %>% 
-  column_to_rownames("gene_name") %>% 
-  pheatmap(cluster_cols = FALSE, clustering_method = 'average',
-           breaks = seq(-max(abs(.)),  max(abs(.)), length.out = 100), 
-           color = colorRampPalette(rev(brewer.pal(n = 7, 
-                                                   name = "RdBu")))(100), 
-           main = "Ryan et al. leading edge shared genes")
-
-
-toptable_1 %>% 
-  bind_rows() %>% 
-  dplyr::filter(gene_id %in% fgseaRes_notch$`EOfAD-like/+`[1,]$leadingEdge[[1]])%>% 
-  dplyr::select(gene_name, coef, logFC) %>% 
-  dplyr::distinct(gene_name, coef, .keep_all = TRUE) %>% 
-  spread(key = "coef", value = "logFC") %>% 
-  column_to_rownames("gene_name") %>% 
-  pheatmap(cluster_cols = FALSE, clustering_method = 'average',
-           breaks = seq(-max(abs(.)),  max(abs(.)), length.out = 100), 
-           color = colorRampPalette(rev(brewer.pal(n = 7, 
-                                                   name = "RdBu")))(100), 
-           main = "Ryan et al. leading edge shared genes")
-                  
-toptable_1 %>% 
-  bind_rows() %>% 
-  dplyr::filter(gene_id %in% fgseaRes_notch$`fHS-like/+`[1,]$leadingEdge[[1]])%>% 
-  dplyr::select(gene_name, coef, logFC) %>% 
-  dplyr::distinct(gene_name, coef, .keep_all = TRUE) %>% 
-  spread(key = "coef", value = "logFC") %>% 
-  column_to_rownames("gene_name") %>% 
-  pheatmap(cluster_cols = FALSE, clustering_method = 'average',
-           breaks = seq(-max(abs(.)),  max(abs(.)), length.out = 100), 
-           color = colorRampPalette(rev(brewer.pal(n = 7, 
-                                                   name = "RdBu")))(100), 
-           main = "Ryan et al. leading edge shared genes")
+# 
+# annocol <- notchTargets$RYAN_MANTLE_CELL_LYMPHOMA_NOTCH_DIRECT_UP %>% 
+#   as.data.frame() %>% 
+#   set_colnames("gene_id") %>% 
+#   mutate(`EOfAD-like/+` = case_when(
+#     gene_id %in% fgseaRes_notch$`EOfAD-like/+`$leadingEdge[[1]] ~ "TRUE"),
+#     `fAI-like/+` = case_when(
+#       gene_id %in% fgseaRes_notch$`fAI-like/+`$leadingEdge[[1]] ~ "TRUE"
+#     )  
+#   ) %>% 
+#   replace_na(list(`EOfAD-like/+` = FALSE, `fAI-like/+` = FALSE)) %>% 
+#   inner_join(x$genes) %>% 
+#   dplyr::distinct(gene_name, .keep_all = TRUE) %>% 
+#   dplyr::select(gene_name, `EOfAD-like/+`, `fAI-like/+`) %>% 
+#   column_to_rownames("gene_name") 
+# 
+# png("plots/ryanetalPheatmap.png", width = 60, height = 20, units = "cm", res = 600)
+# toptable_1 %>% 
+#   bind_rows() %>% 
+#   dplyr::filter(gene_id %in% notchTargets$RYAN_MANTLE_CELL_LYMPHOMA_NOTCH_DIRECT_UP) %>% 
+#   dplyr::select(gene_name, coef, logFC) %>% 
+#   dplyr::distinct(gene_name, coef, .keep_all = TRUE) %>% 
+#   spread(key = "coef", value = "logFC") %>% 
+#   column_to_rownames("gene_name") %>% 
+#   t() %>% 
+#   pheatmap(cellwidth = 10, cellheight = 10,
+#            treeheight_row = 0, treeheight_col = 80,
+#            breaks = seq(-max(abs(.)),  max(abs(.)), length.out = 100), 
+#            color = colorRampPalette(rev(brewer.pal(n = 7, 
+#                                                    name = "RdBu")))(100), 
+#            main = "RYAN_MANTLE_CELL_LYMPHOMA_NOTCH_DIRECT_UP" , 
+#            annotation_col = annocol, 
+#            annotation_colors = list(
+#              `EOfAD-like/+` = c("FALSE" = "grey70", "TRUE" = "#6bff97"), 
+#              `fAI-like/+` = c("FALSE" = "grey70", "TRUE" = "#6bff97"))
+#            )
+# dev.off()  
+#   
+# fgseaRes_notch %>% 
+#   lapply(function(y) {
+#     y %>% 
+#       dplyr::filter(pathway == "RYAN_MANTLE_CELL_LYMPHOMA_NOTCH_DIRECT_UP") %>% 
+#       dplyr::select(leadingEdge)
+#   }) %>% 
+#   unlist %>% 
+#   as.data.frame() %>% 
+#   rownames_to_column("coef") %>% 
+#   set_colnames(c("coef", "gene_id")) %>% 
+#   mutate(coef = str_remove(coef, pattern = ".leadingEdge[0-9]+")) %>% 
+#   split(f = .$coef) %>% 
+#   lapply(magrittr::extract2, "gene_id") %>% 
+#   UpSetR::fromList() %>% 
+#   UpSetR::upset(order.by = "freq")
+# 
+# toptable_1 %>% 
+#   bind_rows() %>% 
+#   dplyr::filter(gene_id %in% intersect(fgseaRes_notch$`EOfAD-like/+`[1,]$leadingEdge[[1]], 
+#                                        fgseaRes_notch$`fHS-like/+`[1,]$leadingEdge[[1]])) %>% 
+#   dplyr::select(gene_name, coef, logFC) %>% 
+#   dplyr::distinct(gene_name, coef, .keep_all = TRUE) %>% 
+#   spread(key = "coef", value = "logFC") %>% 
+#   column_to_rownames("gene_name") %>% 
+#   pheatmap(cluster_cols = FALSE, clustering_method = 'average',
+#            breaks = seq(-max(abs(.)),  max(abs(.)), length.out = 100), 
+#            color = colorRampPalette(rev(brewer.pal(n = 7, 
+#                                                    name = "RdBu")))(100), 
+#            main = "Ryan et al. leading edge shared genes")
+# 
+# 
+# toptable_1 %>% 
+#   bind_rows() %>% 
+#   dplyr::filter(gene_id %in% fgseaRes_notch$`EOfAD-like/+`[1,]$leadingEdge[[1]])%>% 
+#   dplyr::select(gene_name, coef, logFC) %>% 
+#   dplyr::distinct(gene_name, coef, .keep_all = TRUE) %>% 
+#   spread(key = "coef", value = "logFC") %>% 
+#   column_to_rownames("gene_name") %>% 
+#   pheatmap(cluster_cols = FALSE, clustering_method = 'average',
+#            breaks = seq(-max(abs(.)),  max(abs(.)), length.out = 100), 
+#            color = colorRampPalette(rev(brewer.pal(n = 7, 
+#                                                    name = "RdBu")))(100), 
+#            main = "Ryan et al. leading edge shared genes")
+#                   
+# toptable_1 %>% 
+#   bind_rows() %>% 
+#   dplyr::filter(gene_id %in% fgseaRes_notch$`fHS-like/+`[1,]$leadingEdge[[1]])%>% 
+#   dplyr::select(gene_name, coef, logFC) %>% 
+#   dplyr::distinct(gene_name, coef, .keep_all = TRUE) %>% 
+#   spread(key = "coef", value = "logFC") %>% 
+#   column_to_rownames("gene_name") %>% 
+#   pheatmap(cluster_cols = FALSE, clustering_method = 'average',
+#            breaks = seq(-max(abs(.)),  max(abs(.)), length.out = 100), 
+#            color = colorRampPalette(rev(brewer.pal(n = 7, 
+#                                                    name = "RdBu")))(100), 
+#            main = "Ryan et al. leading edge shared genes")
 
 design %>% colnames() %>% .[2:3] %>% 
   sapply(function(y) {
@@ -1532,7 +1528,7 @@ design %>% colnames() %>% .[2:3] %>%
   bind_rows() %>% 
   mutate(Upregulated = NGenes*PropUp, 
          Downregulated = NGenes*PropDown, 
-         ns = NGenes - Upregulated - Downregulated) %>% View
+         ns = NGenes - Upregulated - Downregulated) %>% 
   left_join(HMP_notch) %>% 
   dplyr::select(pathway, Upregulated, Downregulated, ns, coef, harmonic_p, sig) %>% 
   gather(key = "Direction", value = "NGenes", c("Upregulated", "Downregulated", "ns")) %>% 
@@ -1582,37 +1578,6 @@ cpm(x, log = TRUE) %>%
 ```
 
 
-# Check APP AICD targets
-
-I used this review (https://doi.org/10.1016/j.pneurobio.2017.05.005) to get a list of targets for the AICD to assess whether its trascriptional targets are altered. 
-
-
-```{r}
-
-grGenes %>% as_tibble() %>% dplyr::filter(gene_name %in% c("appa", "appb")) %>%  .$gene_id -> temp
-
-cpm(x, log = TRUE) %>% 
-  as.data.frame() %>% 
-  .[temp,] %>% 
-  na.omit() %>% 
-  rownames_to_column("gene_id") %>% 
-  left_join(grGenes %>% as_tibble) %>% 
-  gather(key = "sample", value = "logCPM", colnames(x$counts)) %>% 
-  left_join(x$samples) %>% 
-  ggplot(aes(x = Genotype, y = logCPM, fill = Genotype)) +
-  geom_boxplot(outlier.shape = NA) +
-  geom_jitter(aes(shape = Sex), 
-              size = 3,  colour = "black") +
-  theme_bw() +
-  theme(aspect.ratio = 1) +
-  facet_wrap(~gene_name) +
-  easy_rotate_x_labels(angle = -45) +
-  stat_summary(FUN = "mean", geom = "point", shape = 23) +
-  labs(x = "Genotype", 
-       fill = "Genotype") +
-    stat_compare_means(comparisons = list(c("WT", "EOfAD-like/+"),
-                                          c("WT", "fAI-like/+")))
-```
 
 
 # cell type check
@@ -1799,7 +1764,7 @@ sig_in_all <- comp_w_Q96 %>%
     
     `EOfAD-like/+` == "FALSE" & `fAI-like/+` == TRUE & `Q96_K97del/+` == "FALSE" ~ 'fHS only', 
     
-    `EOfAD-like/+` == TRUE & `fAI-like/+` == "FALSE" & `Q96_K97del/+` == "FALSE" ~ "T428 only",
+    `EOfAD-like/+` == TRUE & `fAI-like/+` == "FALSE" & `Q96_K97del/+` == "FALSE" ~ "T428del only",
     
     `EOfAD-like/+` == "FALSE" & `fAI-like/+` == "FALSE" & `Q96_K97del/+` == TRUE ~ "Q96 only",
     
